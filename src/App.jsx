@@ -7,6 +7,9 @@ import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import Users from './pages/Users';
 import Bets from './pages/Bets';
+import WaveChallengeFlip from './pages/admin/WaveChallengeFlip';
+import WaveFlip from './pages/admin/WaveFlip';
+import WavePrizePool from './pages/admin/WavePrizePool';
 import Login from './pages/Login';
 
 function AppContent() {
@@ -26,6 +29,9 @@ function AppContent() {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/bets" element={<Bets />} />
+                <Route path="/admin/wave-challenge-flip" element={<WaveChallengeFlip />} />
+                <Route path="/admin/wave-flip" element={<WaveFlip />} />
+                <Route path="/admin/wave-prize-pool" element={<WavePrizePool />} />
               </Routes>
             </div>
           </ProtectedRoute>
