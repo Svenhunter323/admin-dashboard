@@ -11,6 +11,28 @@ import WaveChallengeFlip from './pages/admin/WaveChallengeFlip';
 import WaveFlip from './pages/admin/WaveFlip';
 import WavePrizePool from './pages/admin/WavePrizePool';
 import Login from './pages/Login';
+import { createWeb3Modal, defaultWagmiConfig } from '@web3modal/wagmi/react';
+import {config} from "./config.jsx";
+import { WagmiProvider, createConfig, http } from 'wagmi'
+import { QueryParamProvider } from 'use-query-params';
+
+const metadata = {
+  name: 'Wave Wealth',
+  description: 'Play, Invest,Exchange and Join the Contest with high rewards at Wave Wealth!',
+  url: 'https://wavewealth.io',
+};
+const projectId = import.meta.env.NEXT_PUBLIC_PROJECT_ID || "166c810a1a76fedfcbfb4a4c442c40ed"
+createWeb3Modal({
+  themeVariables: {
+    '--w3m-accent': '#581c87',
+    '--w3m-color-mix': '#004200',
+    "--w3m-color-mix-strength": 40,
+    '--w3m-border-radius-master': '12px'
+  },
+  projectId,
+  metadata,
+  wagmiConfig: config
+})
 
 function AppContent() {
   useAutoKick();
@@ -22,18 +44,22 @@ function AppContent() {
         path="/*"
         element={
           <ProtectedRoute>
-            <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-              <Sidebar />
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/bets" element={<Bets />} />
-                <Route path="/admin/wave-challenge-flip" element={<WaveChallengeFlip />} />
-                <Route path="/admin/wave-flip" element={<WaveFlip />} />
-                <Route path="/admin/wave-prize-pool" element={<WavePrizePool />} />
-              </Routes>
-            </div>
+            <QueryParamProvider>
+              <WagmiProvider config={config}>
+                <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+                  <Sidebar />
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/users" element={<Users />} />
+                    <Route path="/bets" element={<Bets />} />
+                      <Route path="/admin/wave-challenge-flip" element={<WaveChallengeFlip />} />
+                      <Route path="/admin/wave-flip" element={<WaveFlip />} />
+                      <Route path="/admin/wave-prize-pool" element={<WavePrizePool />} />
+                  </Routes>
+                </div>
+              </WagmiProvider>
+            </QueryParamProvider>
           </ProtectedRoute>
         }
       />

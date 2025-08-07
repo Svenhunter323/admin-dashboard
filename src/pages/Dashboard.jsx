@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { adminAPI } from '../api';
 import { useSocket } from '../hooks/useSocket';
 import KPIBlock from '../components/KPIBlock';
@@ -7,6 +7,7 @@ import {
   UsersIcon,
   CurrencyDollarIcon,
   ChartBarIcon,
+  CubeTransparentIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 
@@ -22,6 +23,7 @@ export default function Dashboard() {
   const fetchStats = async () => {
     try {
       const response = await adminAPI.getStats();
+      // console.log('Fetched stats:', response.data);
       setStats(response.data);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -76,7 +78,7 @@ export default function Dashboard() {
             />
             <KPIBlock
               title="Total Volume"
-              value={`${stats.totalVolume} XP`}
+              value={`${stats.totalVolume/1e18} XP`}
               icon={ChartBarIcon}
               color="yellow"
               trend={-3}

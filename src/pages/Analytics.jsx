@@ -44,9 +44,9 @@ export default function Analytics() {
         ],
         gameTypes: [
           { name: 'Coin Flip', value: 45, count: 450 },
-          { name: 'Dice Roll', value: 30, count: 300 },
-          { name: 'Roulette', value: 15, count: 150 },
-          { name: 'Blackjack', value: 10, count: 100 },
+          { name: 'Coin Flip Challenge', value: 35, count: 300 },
+          { name: 'Prize Pool', value: 20, count: 150 },
+          // { name: 'Blackjack', value: 10, count: 100 },
         ],
         userGrowth: [
           { month: 'Jan', users: 100 },
