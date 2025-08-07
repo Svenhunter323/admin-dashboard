@@ -1,6 +1,7 @@
 import { useState, useEffect, use } from 'react';
 import { adminAPI } from '../api';
 import { useSocket } from '../hooks/useSocket';
+import VRFMonitor from '../components/admin/VRFMonitor';
 import KPIBlock from '../components/KPIBlock';
 import Header from '../components/Header';
 import {
@@ -89,6 +90,10 @@ export default function Dashboard() {
               icon={ExclamationTriangleIcon}
               color="red"
             />
+          </div>
+
+          <div className="mb-8">
+            <VRFMonitor />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

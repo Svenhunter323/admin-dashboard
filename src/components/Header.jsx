@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 
 export default function Header() {
@@ -23,16 +24,19 @@ export default function Header() {
           </p>
         </div>
         
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-        >
-          {darkMode ? (
-            <SunIcon className="w-5 h-5 text-yellow-500" />
-          ) : (
-            <MoonIcon className="w-5 h-5 text-gray-600" />
-          )}
-        </button>
+        <div className="flex items-center space-x-4">
+          <ConnectButton />
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            {darkMode ? (
+              <SunIcon className="w-5 h-5 text-yellow-500" />
+            ) : (
+              <MoonIcon className="w-5 h-5 text-gray-600" />
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );
