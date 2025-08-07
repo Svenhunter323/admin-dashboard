@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAutoKick } from './hooks/useAutoKick';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -38,6 +39,18 @@ createWeb3Modal({
 
 function AppContent() {
   useAutoKick();
+  
+  // Initialize dark mode on app load
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedDarkMode === 'true' || (savedDarkMode === null && prefersDark)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   return (
     <Routes>

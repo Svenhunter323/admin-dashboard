@@ -1,3 +1,63 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure smooth transitions for dark mode */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Custom scrollbar for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Ensure proper dark mode for body */
+body {
+  @apply bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200;
+}
+
+/* RainbowKit dark mode compatibility */
+.dark [data-rk] {
+  --rk-colors-modalBackground: rgb(31 41 55);
+  --rk-colors-modalBorder: rgb(75 85 99);
+  --rk-colors-generalBorder: rgb(75 85 99);
+  --rk-colors-actionButtonBorder: rgb(75 85 99);
+  --rk-colors-actionButtonSecondaryBackground: rgb(55 65 81);
+  --rk-colors-closeButton: rgb(156 163 175);
+  --rk-colors-closeButtonBackground: rgb(55 65 81);
+  --rk-colors-connectButtonBackground: rgb(79 70 229);
+  --rk-colors-connectButtonBackgroundError: rgb(239 68 68);
+  --rk-colors-connectButtonInnerBackground: rgb(99 102 241);
+  --rk-colors-connectButtonText: rgb(255 255 255);
+  --rk-colors-connectButtonTextError: rgb(255 255 255);
+  --rk-colors-connectionIndicator: rgb(34 197 94);
+  --rk-colors-downloadBottomCardBackground: rgb(31 41 55);
+  --rk-colors-downloadTopCardBackground: rgb(31 41 55);
+  --rk-colors-error: rgb(239 68 68);
+  --rk-colors-generalBorderDim: rgb(55 65 81);
+  --rk-colors-menuItemBackground: rgb(55 65 81);
+  --rk-colors-modalBackdrop: rgba(0, 0, 0, 0.5);
+  --rk-colors-modalText: rgb(243 244 246);
+  --rk-colors-modalTextDim: rgb(156 163 175);
+  --rk-colors-modalTextSecondary: rgb(209 213 219);
+  --rk-colors-profileAction: rgb(55 65 81);
+  --rk-colors-profileActionHover: rgb(75 85 99);
+  --rk-colors-profileForeground: rgb(31 41 55);
+  --rk-colors-selectedOptionBorder: rgb(79 70 229);
+  --rk-colors-standby: rgb(156 163 175);
+}
