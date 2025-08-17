@@ -1,20 +1,42 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther, formatEther } from 'viem';
 import { toast } from 'react-hot-toast';
 import Header from '../../components/Header';
 import ContractStatusCard from '../../components/admin/ContractStatusCard';
 import OwnerActions from '../../components/admin/OwnerActions';
+import Table from '../../components/Table';
 import { waveChallengeFlipConfig } from '../../lib/contracts/waveChallengeFlip';
 import { 
   CurrencyDollarIcon, 
   LinkIcon, 
   ArrowPathIcon,
-  ChartBarIcon 
+  ChartBarIcon,
+  PlusIcon,
+  TrophyIcon,
+  ClockIcon,
+  UserGroupIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 export default function WaveChallengeFlip() {
   const { address, isConnected } = useAccount();
   const [loading, setLoading] = useState({});
+  const [activeTab, setActiveTab] = useState('overview');
+  const [gamePools, setGamePools] = useState([]);
+  const [challenges, setChallenges] = useState([]);
+  const [gameForm, setGameForm] = useState({
+    baseToken: '',
+    burnFee: '',
+    treasuryFee: '',
+    minTokenAmount: ''
+  });
+  const [challengeForm, setChallengeForm] = useState({
+    gameId: '',
+    xpAmount: '',
+    side: true
+  });
+  
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
@@ -29,14 +51,19 @@ export default function WaveChallengeFlip() {
     functionName: 'paused',
   });
 
-  const { data: gameStats } = useReadContract({
+  const { data: gameIds } = useReadContract({
     ...waveChallengeFlipConfig,
-    functionName: 'getGameStats',
+    functionName: 'getGameIds',
   });
 
-  const { data: xpBalance } = useReadContract({
+  const { data: challengeIds } = useReadContract({
     ...waveChallengeFlipConfig,
-    functionName: 'getXPBalance',
+    functionName: 'getChallengeIds',
+  });
+
+  const { data: treasury } = useReadContract({
+    ...waveChallengeFlipConfig,
+    functionName: 'treasury',
   });
 
   const { data: linkBalance } = useReadContract({
@@ -46,10 +73,81 @@ export default function WaveChallengeFlip() {
 
   const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
 
+  // Fetch game pools data
+  useEffect(() => {
+    const fetchGamePools = async () => {
+      if (!gameIds || gameIds[1]?.length === 0) return;
+      
+      const poolsData = [];
+      for (const gameId of gameIds[1]) {
+        try {
+          const gameInfo = await readContract({
+            ...waveChallengeFlipConfig,
+            functionName: 'getGameInfo',
+            args: [gameId],
+          });
+          
+          poolsData.push({
+            gameId,
+            baseToken: gameInfo[0],
+            burnFee: gameInfo[1],
+            treasuryFee: gameInfo[2],
+            totalXpAmount: gameInfo[3],
+            challengeIds: gameInfo[4],
+            minTokenAmount: gameInfo[5],
+            isActive: gameInfo[6]
+          });
+        } catch (error) {
+          console.error('Error fetching game info:', error);
+        }
+      }
+      setGamePools(poolsData);
+    };
+
+    fetchGamePools();
+  }, [gameIds]);
+
+  // Fetch challenges data
+  useEffect(() => {
+    const fetchChallenges = async () => {
+      if (!challengeIds || challengeIds[1]?.length === 0) return;
+      
+      const challengesData = [];
+      for (const challengeId of challengeIds[1]) {
+        try {
+          const challengeInfo = await readContract({
+            ...waveChallengeFlipConfig,
+            functionName: 'getChallengeInfo',
+            args: [challengeId],
+          });
+          
+          challengesData.push({
+            challengeId,
+            gameId: challengeInfo[0],
+            creator: challengeInfo[1],
+            challenger: challengeInfo[2],
+            isActive: challengeInfo[3],
+            result: challengeInfo[4],
+            createTime: challengeInfo[5],
+            drawTime: challengeInfo[6],
+            xpAmount: challengeInfo[7]
+          });
+        } catch (error) {
+          console.error('Error fetching challenge info:', error);
+        }
+      }
+      setChallenges(challengesData);
+    };
+
+    fetchChallenges();
+  }, [challengeIds]);
+
   useEffect(() => {
     if (isSuccess) {
       toast.success('Transaction completed successfully!');
       setLoading({});
+      setGameForm({ baseToken: '', burnFee: '', treasuryFee: '', minTokenAmount: '' });
+      setChallengeForm({ gameId: '', xpAmount: '', side: true });
     }
   }, [isSuccess]);
 
@@ -79,50 +177,237 @@ export default function WaveChallengeFlip() {
     }
   };
 
-  const handleWithdrawXP = async () => {
+  const handleWithdraw = async () => {
+    if (!gameForm.baseToken || !gameForm.minTokenAmount) {
+      toast.error('Please specify token address and amount');
+      return;
+    }
+
     try {
-      setLoading(prev => ({ ...prev, withdrawXP: true }));
+      setLoading(prev => ({ ...prev, withdraw: true }));
       writeContract({
         ...waveChallengeFlipConfig,
         functionName: 'withdraw',
-        args: [import.meta.env.BASE_TOKEN, xpBalance],
+        args: [gameForm.baseToken, parseEther(gameForm.minTokenAmount)],
       });
     } catch (error) {
-      toast.error('Failed to withdraw XP');
-      setLoading(prev => ({ ...prev, withdrawXP: false }));
+      toast.error('Failed to withdraw tokens');
+      setLoading(prev => ({ ...prev, withdraw: false }));
     }
   };
 
-  const handleWithdrawLink = async () => {
+  const handleCreateGame = async () => {
+    const { baseToken, burnFee, treasuryFee, minTokenAmount } = gameForm;
+    
+    if (!baseToken || !burnFee || !treasuryFee || !minTokenAmount) {
+      toast.error('Please fill all game creation fields');
+      return;
+    }
+
+    if (parseInt(burnFee) + parseInt(treasuryFee) > 100) {
+      toast.error('Total fees cannot exceed 100%');
+      return;
+    }
+
     try {
-      setLoading(prev => ({ ...prev, withdrawLink: true }));
+      setLoading(prev => ({ ...prev, createGame: true }));
       writeContract({
         ...waveChallengeFlipConfig,
-        functionName: 'withdrawLink',
+        functionName: 'createGame',
+        args: [
+          baseToken,
+          parseInt(burnFee),
+          parseInt(treasuryFee),
+          parseEther(minTokenAmount)
+        ],
       });
     } catch (error) {
-      toast.error('Failed to withdraw LINK');
-      setLoading(prev => ({ ...prev, withdrawLink: false }));
+      toast.error('Failed to create game');
+      setLoading(prev => ({ ...prev, createGame: false }));
     }
   };
 
-  const handleTriggerFallback = async () => {
+  const handleCreateChallenge = async () => {
+    const { gameId, xpAmount, side } = challengeForm;
+    
+    if (!gameId || !xpAmount) {
+      toast.error('Please fill all challenge creation fields');
+      return;
+    }
+
     try {
-      setLoading(prev => ({ ...prev, fallback: true }));
+      setLoading(prev => ({ ...prev, createChallenge: true }));
       writeContract({
         ...waveChallengeFlipConfig,
-        functionName: 'triggerFallbackRandomness',
+        functionName: 'createChallenge',
+        args: [gameId, parseEther(xpAmount), side],
       });
     } catch (error) {
-      toast.error('Failed to trigger fallback randomness');
-      setLoading(prev => ({ ...prev, fallback: false }));
+      toast.error('Failed to create challenge');
+      setLoading(prev => ({ ...prev, createChallenge: false }));
     }
   };
+
+  const handleCancelChallenge = async (challengeId) => {
+    try {
+      setLoading(prev => ({ ...prev, [`cancel_${challengeId}`]: true }));
+      writeContract({
+        ...waveChallengeFlipConfig,
+        functionName: 'cancelChallenge',
+        args: [challengeId],
+      });
+    } catch (error) {
+      toast.error('Failed to cancel challenge');
+      setLoading(prev => ({ ...prev, [`cancel_${challengeId}`]: false }));
+    }
+  };
+
+  const gamePoolColumns = [
+    {
+      key: 'gameId',
+      label: 'Game ID',
+      render: (value) => (
+        <span className="font-mono text-xs text-gray-600 dark:text-gray-400">
+          {value.slice(0, 8)}...{value.slice(-6)}
+        </span>
+      ),
+    },
+    {
+      key: 'baseToken',
+      label: 'Base Token',
+      render: (value) => (
+        <span className="font-mono text-xs">
+          {value.slice(0, 6)}...{value.slice(-4)}
+        </span>
+      ),
+    },
+    {
+      key: 'minTokenAmount',
+      label: 'Min Amount',
+      render: (value) => `${formatEther(value)} XP`,
+    },
+    {
+      key: 'burnFee',
+      label: 'Burn Fee',
+      render: (value) => `${value}%`,
+    },
+    {
+      key: 'treasuryFee',
+      label: 'Treasury Fee',
+      render: (value) => `${value}%`,
+    },
+    {
+      key: 'totalXpAmount',
+      label: 'Total Volume',
+      render: (value) => `${formatEther(value)} XP`,
+    },
+    {
+      key: 'isActive',
+      label: 'Status',
+      render: (value) => (
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            value
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+              : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+          }`}
+        >
+          {value ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+  ];
+
+  const challengeColumns = [
+    {
+      key: 'challengeId',
+      label: 'Challenge ID',
+      render: (value) => (
+        <span className="font-mono text-xs text-gray-600 dark:text-gray-400">
+          {value.slice(0, 8)}...{value.slice(-6)}
+        </span>
+      ),
+    },
+    {
+      key: 'creator',
+      label: 'Creator',
+      render: (value) => (
+        <div className="flex items-center">
+          <span className="font-mono text-xs">
+            {value.userAddress.slice(0, 6)}...{value.userAddress.slice(-4)}
+          </span>
+          <span className={`ml-2 px-2 py-1 text-xs rounded ${
+            value.side ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' : 
+            'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+          }`}>
+            {value.side ? 'Heads' : 'Tails'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'challenger',
+      label: 'Challenger',
+      render: (value) => (
+        value.userAddress !== '0x0000000000000000000000000000000000000000' ? (
+          <div className="flex items-center">
+            <span className="font-mono text-xs">
+              {value.userAddress.slice(0, 6)}...{value.userAddress.slice(-4)}
+            </span>
+            <span className={`ml-2 px-2 py-1 text-xs rounded ${
+              value.side ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' : 
+              'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+            }`}>
+              {value.side ? 'Heads' : 'Tails'}
+            </span>
+          </div>
+        ) : (
+          <span className="text-gray-400 text-sm">Waiting...</span>
+        )
+      ),
+    },
+    {
+      key: 'xpAmount',
+      label: 'Amount',
+      render: (value) => `${formatEther(value)} XP`,
+    },
+    {
+      key: 'isActive',
+      label: 'Status',
+      render: (value, row) => (
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            value
+              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+              : row.result !== undefined
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+              : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+          }`}
+        >
+          {value ? 'Active' : row.result !== undefined ? 'Completed' : 'Cancelled'}
+        </span>
+      ),
+    },
+  ];
+
+  const challengeActions = (challenge) => (
+    challenge.isActive && challenge.challenger.userAddress === '0x0000000000000000000000000000000000000000' && 
+    challenge.creator.userAddress.toLowerCase() === address?.toLowerCase() ? (
+      <button
+        onClick={() => handleCancelChallenge(challenge.challengeId)}
+        disabled={loading[`cancel_${challenge.challengeId}`] || isPending || isConfirming}
+        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <XMarkIcon className="w-4 h-4 mr-1" />
+        {loading[`cancel_${challenge.challengeId}`] ? 'Cancelling...' : 'Cancel'}
+      </button>
+    ) : null
+  );
 
   const stats = {
-    totalGames: gameStats?.[0] || 0,
-    totalVolume: gameStats?.[1] || 0,
-    xpBalance: xpBalance || 0,
+    totalGames: gamePools.length,
+    activeChallenges: challenges.filter(c => c.isActive).length,
+    totalVolume: gamePools.reduce((sum, pool) => sum + Number(formatEther(pool.totalXpAmount)), 0),
     linkBalance: linkBalance || 0,
   };
 
@@ -137,111 +422,263 @@ export default function WaveChallengeFlip() {
               Wave Challenge Flip Admin
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Manage the Wave Challenge Flip smart contract
+              Manage game pools, challenges, and smart contract operations
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <ContractStatusCard
-              contractName="Wave Challenge Flip"
-              isPaused={isPaused}
-              isOwner={isOwner}
-              isConnected={isConnected}
-              loading={isPending || isConfirming}
-              stats={stats}
-            />
+          {/* Tab Navigation */}
+          <div className="mb-6">
+            <nav className="flex space-x-8">
+              {[
+                { id: 'overview', name: 'Overview', icon: ChartBarIcon },
+                { id: 'games', name: 'Game Pools', icon: UserGroupIcon },
+                { id: 'challenges', name: 'Challenges', icon: TrophyIcon },
+                { id: 'create', name: 'Create', icon: PlusIcon },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <tab.icon className="w-5 h-5 mr-2" />
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Contract Balances
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <div className="flex items-center">
-                    <CurrencyDollarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">XP Balance</span>
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ContractStatusCard
+                  contractName="Wave Challenge Flip"
+                  isPaused={isPaused}
+                  isOwner={isOwner}
+                  isConnected={isConnected}
+                  loading={isPending || isConfirming}
+                  stats={stats}
+                />
+
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Contract Balances
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                      <div className="flex items-center">
+                        <LinkIcon className="w-5 h-5 text-orange-600 dark:text-orange-400 mr-2" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">LINK Balance</span>
+                      </div>
+                      <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                        {formatEther(stats.linkBalance)} LINK
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="flex items-center">
+                        <CurrencyDollarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">Treasury</span>
+                      </div>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400 font-mono">
+                        {treasury?.slice(0, 6)}...{treasury?.slice(-4)}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                    {stats.xpBalance.toString()}
-                  </span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                  <div className="flex items-center">
-                    <LinkIcon className="w-5 h-5 text-orange-600 dark:text-orange-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">LINK Balance</span>
+              </div>
+
+              <OwnerActions
+                isOwner={isOwner}
+                isPaused={isPaused}
+                onPause={handlePause}
+                onUnpause={handleUnpause}
+                onWithdraw={handleWithdraw}
+                loading={{ 
+                  pause: loading.pause || isPending || isConfirming,
+                  withdraw: loading.withdraw || isPending || isConfirming 
+                }}
+              />
+            </div>
+          )}
+
+          {/* Game Pools Tab */}
+          {activeTab === 'games' && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Game Pools ({gamePools.length})
+                </h3>
+                <Table columns={gamePoolColumns} data={gamePools} />
+              </div>
+            </div>
+          )}
+
+          {/* Challenges Tab */}
+          {activeTab === 'challenges' && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Challenges ({challenges.length})
+                </h3>
+                <Table columns={challengeColumns} data={challenges} actions={challengeActions} />
+              </div>
+            </div>
+          )}
+
+          {/* Create Tab */}
+          {activeTab === 'create' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Create Game Pool */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Create Game Pool
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Base Token Address
+                    </label>
+                    <input
+                      type="text"
+                      value={gameForm.baseToken}
+                      onChange={(e) => setGameForm(prev => ({ ...prev, baseToken: e.target.value }))}
+                      placeholder="0x..."
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
-                  <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                    {stats.linkBalance.toString()}
-                  </span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Burn Fee (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={gameForm.burnFee}
+                        onChange={(e) => setGameForm(prev => ({ ...prev, burnFee: e.target.value }))}
+                        placeholder="5"
+                        min="0"
+                        max="100"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Treasury Fee (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={gameForm.treasuryFee}
+                        onChange={(e) => setGameForm(prev => ({ ...prev, treasuryFee: e.target.value }))}
+                        placeholder="5"
+                        min="0"
+                        max="100"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Minimum Token Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={gameForm.minTokenAmount}
+                      onChange={(e) => setGameForm(prev => ({ ...prev, minTokenAmount: e.target.value }))}
+                      placeholder="1.0"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCreateGame}
+                    disabled={loading.createGame || isPending || isConfirming || !isOwner}
+                    className="w-full flex items-center justify-center px-4 py-3 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <PlusIcon className="w-5 h-5 mr-2" />
+                    {loading.createGame ? 'Creating...' : 'Create Game Pool'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Create Challenge */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Create Challenge
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Game Pool
+                    </label>
+                    <select
+                      value={challengeForm.gameId}
+                      onChange={(e) => setChallengeForm(prev => ({ ...prev, gameId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a game pool</option>
+                      {gamePools.filter(pool => pool.isActive).map((pool) => (
+                        <option key={pool.gameId} value={pool.gameId}>
+                          {pool.gameId.slice(0, 8)}...{pool.gameId.slice(-6)} - Min: {formatEther(pool.minTokenAmount)} XP
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      XP Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={challengeForm.xpAmount}
+                      onChange={(e) => setChallengeForm(prev => ({ ...prev, xpAmount: e.target.value }))}
+                      placeholder="10.0"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Choose Side
+                    </label>
+                    <div className="flex space-x-4">
+                      <button
+                        onClick={() => setChallengeForm(prev => ({ ...prev, side: true }))}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                          challengeForm.side
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                        }`}
+                      >
+                        Heads
+                      </button>
+                      <button
+                        onClick={() => setChallengeForm(prev => ({ ...prev, side: false }))}
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                          !challengeForm.side
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
+                        }`}
+                      >
+                        Tails
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCreateChallenge}
+                    disabled={loading.createChallenge || isPending || isConfirming}
+                    className="w-full flex items-center justify-center px-4 py-3 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <TrophyIcon className="w-5 h-5 mr-2" />
+                    {loading.createChallenge ? 'Creating...' : 'Create Challenge'}
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <OwnerActions
-              isOwner={isOwner}
-              isPaused={isPaused}
-              onPause={handlePause}
-              onUnpause={handleUnpause}
-              loading={{ pause: loading.pause || isPending || isConfirming }}
-            >
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  onClick={handleWithdrawXP}
-                  disabled={loading.withdrawXP || isPending || isConfirming}
-                  className="flex items-center justify-center px-4 py-3 rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <CurrencyDollarIcon className="w-5 h-5 mr-2" />
-                  {loading.withdrawXP ? 'Processing...' : 'Withdraw XP'}
-                </button>
-                
-                {/* <button
-                  onClick={handleWithdrawLink}
-                  disabled={loading.withdrawLink || isPending || isConfirming}
-                  className="flex items-center justify-center px-4 py-3 rounded-lg font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <LinkIcon className="w-5 h-5 mr-2" />
-                  {loading.withdrawLink ? 'Processing...' : 'Withdraw LINK'}
-                </button> */}
-                
-                <button
-                  onClick={handleTriggerFallback}
-                  disabled={loading.fallback || isPending || isConfirming}
-                  className="flex items-center justify-center px-4 py-3 rounded-lg font-medium bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowPathIcon className="w-5 h-5 mr-2" />
-                  {loading.fallback ? 'Processing...' : 'Trigger Fallback Randomness'}
-                </button>
-              </div>
-            </OwnerActions>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Game Statistics
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Total Games</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {stats.totalGames.toString()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Total Volume</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {stats.totalVolume.toString()} XP
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Contract Status</span>
-                  <span className={`text-sm font-medium ${isPaused ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                    {isPaused ? 'Paused' : 'Active'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </main>
     </div>
