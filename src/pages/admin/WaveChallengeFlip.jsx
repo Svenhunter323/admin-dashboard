@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { readContract } from '@wagmi/core';
 import { parseEther, formatEther } from 'viem';
 import { toast } from 'react-hot-toast';
 import Header from '../../components/Header';
@@ -18,8 +19,10 @@ import {
   UserGroupIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import { config } from "../../config.jsx";
 
 export default function WaveChallengeFlip() {
+  const chainId = config.chains[0].id;
   const { address, isConnected } = useAccount();
   const [loading, setLoading] = useState({});
   const [activeTab, setActiveTab] = useState('overview');
@@ -73,6 +76,13 @@ export default function WaveChallengeFlip() {
 
   const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
 
+  // Set default base token from environment variable
+  useEffect(() => {
+    if (import.meta.env.BASE_TOKEN && !gameForm.baseToken) {
+      setGameForm(prev => ({ ...prev, baseToken: import.meta.env.BASE_TOKEN }));
+    }
+  }, []);
+
   // Fetch game pools data
   useEffect(() => {
     const fetchGamePools = async () => {
@@ -81,11 +91,14 @@ export default function WaveChallengeFlip() {
       const poolsData = [];
       for (const gameId of gameIds[1]) {
         try {
-          const gameInfo = await readContract({
-            ...waveChallengeFlipConfig,
-            functionName: 'getGameInfo',
-            args: [gameId],
-          });
+          const gameInfo = await readContract( config,
+            {
+              ...waveChallengeFlipConfig,
+              functionName: 'getGameInfo',
+              args: [gameId],
+              chainId: chainId
+            }
+        );
           
           poolsData.push({
             gameId,
@@ -115,10 +128,11 @@ export default function WaveChallengeFlip() {
       const challengesData = [];
       for (const challengeId of challengeIds[1]) {
         try {
-          const challengeInfo = await readContract({
+          const challengeInfo = await readContract(config, {
             ...waveChallengeFlipConfig,
             functionName: 'getChallengeInfo',
             args: [challengeId],
+            chainId: chainId
           });
           
           challengesData.push({

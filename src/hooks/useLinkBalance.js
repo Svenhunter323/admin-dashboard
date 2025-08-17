@@ -5,8 +5,8 @@ import { sepolia } from 'wagmi/chains';
 import { formatUnits } from 'viem';
 
 // Ethereum Sepolia — VRF v2.5 coordinator (official)
-const DEFAULT_COORDINATOR = '0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B';
-const VRF_SUBSCRIPTION_ID = '49596265338176564079456785074959696723617889412259832996157212647999741015293'; // Replace with your actual subscription ID
+const DEFAULT_COORDINATOR = import.meta.env.VITE_DEFAULT_COORDINATOR || '0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B';
+const VRF_SUBSCRIPTION_ID = import.meta.env.VITE_VRF_SUBSCRIPTION_ID || '49596265338176564079456785074959696723617889412259832996157212647999741015293';
 
 // Minimal ABI + the InvalidSubscription error so viem can decode reverts
 const vrfV25Abi = [
