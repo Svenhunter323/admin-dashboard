@@ -1,77 +1,81 @@
+// useVrfSubscriptionBalance.jsx
 import { useState, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
 import { formatUnits } from 'viem';
 
-const LINK_TOKEN_ADDRESS = "0x779877A7B0D9E8603169DdbD7836e478b4624789"; // Sepolia LINK
-const VRF_CONSUMER_ADDRESS = "0x9da078c09a45704d3127a4d8ac9ef366a7da3440"; // Your VRF consumer contract
+// Ethereum Sepolia — VRF v2.5 coordinator (official)
+const DEFAULT_COORDINATOR = '0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B';
+const VRF_SUBSCRIPTION_ID = '49596265338176564079456785074959696723617889412259832996157212647999741015293'; // Replace with your actual subscription ID
 
-const erc20Abi = [
+// Minimal ABI + the InvalidSubscription error so viem can decode reverts
+const vrfV25Abi = [
   {
-    "constant": true,
-    "inputs": [{"name": "_owner", "type": "address"}],
-    "name": "balanceOf",
-    "outputs": [{"name": "balance", "type": "uint256"}],
-    "type": "function"
+    name: 'getSubscription',
+    stateMutability: 'view',
+    type: 'function',
+    inputs: [{ name: 'subId', type: 'uint256' }],
+    outputs: [
+      { name: 'balance', type: 'uint96' },        // LINK (juels)
+      { name: 'nativeBalance', type: 'uint96' },  // native (wei)
+      { name: 'reqCount', type: 'uint64' },
+      { name: 'owner', type: 'address' },
+      { name: 'consumers', type: 'address[]' },
+    ],
   },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [{"name": "", "type": "uint8"}],
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [{"name": "", "type": "string"}],
-    "type": "function"
-  }
+  { type: 'error', name: 'InvalidSubscription', inputs: [] },
 ];
 
-export const useLinkBalance = () => {
-  const [balance, setBalance] = useState(null);
+export const useLinkBalance = ({
+  subscriptionId = VRF_SUBSCRIPTION_ID,   // MUST be the real v2.5 subId (BigInt or number coercible to BigInt)
+  coordinator = DEFAULT_COORDINATOR,
+  chainId = sepolia.id,
+} = {}) => {
+  const [balance, setBalance] = useState(null); // { link:{raw,formatted}, native:{raw,formatted}, reqCount, owner, consumers }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  const publicClient = usePublicClient({
-    chainId: sepolia.id,
-  });
+
+  const publicClient = usePublicClient({ chainId });
 
   const fetchBalance = async () => {
-    if (!publicClient) return;
-    
+    if (!publicClient || !subscriptionId) return;
     try {
       setLoading(true);
       setError(null);
 
-      // Get balance
-      const balanceResult = await publicClient.readContract({
-        address: LINK_TOKEN_ADDRESS,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [VRF_CONSUMER_ADDRESS],
+      const res = await publicClient.readContract({
+        address: coordinator,
+        abi: vrfV25Abi,
+        functionName: 'getSubscription',
+        args: [BigInt(subscriptionId)],
       });
 
-      // Get decimals
-      const decimalsResult = await publicClient.readContract({
-        address: LINK_TOKEN_ADDRESS,
-        abi: erc20Abi,
-        functionName: 'decimals',
-      });
+      const [linkJuels, nativeWei, reqCount, owner, consumers] = res;
 
-      // Format balance
-      const formattedBalance = formatUnits(balanceResult, decimalsResult);
-      
+      // console.log('VRF Subscription Balance:', {
+      //   linkJuels, 
+      //   nativeWei,
+      //   reqCount,
+      //   owner,  
+      //   consumers,
+      // });
+
       setBalance({
-        raw: balanceResult,
-        formatted: formattedBalance,
-        decimals: decimalsResult,
+        link: { raw: linkJuels, formatted: formatUnits(linkJuels, 18) },
+        native: { raw: nativeWei, formatted: formatUnits(nativeWei, 18) },
+        reqCount,
+        owner,
+        consumers,
       });
-    } catch (err) {
-      console.error('Error fetching LINK balance:', err);
-      setError(err.message);
+    } catch (e) {
+      // Helpful message for the common case
+      const msg =
+        e?.shortMessage?.includes('InvalidSubscription') ||
+        e?.message?.includes('InvalidSubscription') ||
+        e?.message?.includes('0x1f6a65b6')
+          ? 'Invalid subscription on this coordinator/chain. Double-check your v2.5 Subscription ID.'
+          : (e?.shortMessage || e?.message || 'Failed to fetch subscription');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -79,17 +83,10 @@ export const useLinkBalance = () => {
 
   useEffect(() => {
     fetchBalance();
-    
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchBalance, 30000);
-    
-    return () => clearInterval(interval);
-  }, [publicClient]);
+    const id = setInterval(fetchBalance, 30000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicClient, coordinator, subscriptionId, chainId]);
 
-  return {
-    balance,
-    loading,
-    error,
-    refetch: fetchBalance,
-  };
+  return { balance, loading, error, refetch: fetchBalance };
 };

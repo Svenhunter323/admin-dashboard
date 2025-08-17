@@ -1,6 +1,6 @@
 import WaveChallengeFlipABI from '../../abi/WaveChallengeFlip.json';
 
-export const WAVE_CHALLENGE_FLIP_ADDRESS = "0x4ceb55189d5032ca3c91771a03fb88a1a7d9ee10";
+export const WAVE_CHALLENGE_FLIP_ADDRESS = "0x303b1f680b379fe3f3604c779c2f0a80326cddb6";
 
 export const waveChallengeFlipConfig = {
   address: WAVE_CHALLENGE_FLIP_ADDRESS,

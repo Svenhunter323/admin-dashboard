@@ -1,5 +1,5 @@
 import { useLinkBalance } from '../../hooks/useLinkBalance';
-import { LinkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { LinkIcon, ArrowPathIcon, ClipboardIcon } from '@heroicons/react/24/outline';
 
 export default function VRFMonitor() {
   const { balance, loading, error, refetch } = useLinkBalance();
@@ -20,11 +20,11 @@ export default function VRFMonitor() {
               VRF Contract LINK Balance
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Chainlink VRF Consumer Balance
+              Chainlink VRF Consumers Overview
             </p>
           </div>
         </div>
-        
+
         <button
           onClick={handleRefresh}
           disabled={loading}
@@ -61,20 +61,38 @@ export default function VRFMonitor() {
           <>
             <div className="text-center py-4">
               <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-                {balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000'}
+                {balance?.link?.formatted ? parseFloat(balance.link.formatted).toFixed(4) : '0.0000'}
               </div>
               <div className="text-lg font-medium text-gray-900 dark:text-white">
                 LINK
               </div>
             </div>
-            
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Contract Address:</span>
-                <span className="font-mono text-xs text-gray-700 dark:text-gray-300">
-                  {`${VRF_CONSUMER_ADDRESS.slice(0, 6)}...${VRF_CONSUMER_ADDRESS.slice(-4)}`}
-                </span>
+
+            {balance?.consumers && balance.consumers.length > 0 && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  Consumers ({balance.consumers.length})
+                </div>
+                <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded max-h-40 overflow-y-auto text-xs font-mono text-gray-800 dark:text-gray-100">
+                  <ul className="space-y-1">
+                    {balance.consumers.map((addr, idx) => (
+                      <li key={idx} className="flex justify-between items-center gap-2 truncate group">
+                        <span className="truncate">{addr}</span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(addr)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-opacity opacity-0 group-hover:opacity-100"
+                          title="Copy to clipboard"
+                        >
+                          <ClipboardIcon className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
+            )}
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
               <div className="flex justify-between items-center text-sm mt-2">
                 <span className="text-gray-500 dark:text-gray-400">Network:</span>
                 <span className="text-gray-700 dark:text-gray-300">Sepolia Testnet</span>
@@ -90,5 +108,3 @@ export default function VRFMonitor() {
     </div>
   );
 }
-
-const VRF_CONSUMER_ADDRESS = "0x9da078c09a45704d3127a4d8ac9ef366a7da3440";

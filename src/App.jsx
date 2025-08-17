@@ -70,7 +70,7 @@ function AppContent() {
                       <Route path="/users" element={<Users />} />
                       <Route path="/bets" element={<Bets />} />
                         <Route path="/admin/wave-challenge-flip" element={<WaveChallengeFlip />} />
-                        <Route path="/admin/wave-flip" element={<WaveFlip />} />
+                        
                         <Route path="/admin/wave-prize-pool" element={<WavePrizePool />} />
                     </Routes>
                   </div>

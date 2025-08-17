@@ -84,7 +84,8 @@ export default function WaveChallengeFlip() {
       setLoading(prev => ({ ...prev, withdrawXP: true }));
       writeContract({
         ...waveChallengeFlipConfig,
-        functionName: 'withdrawXP',
+        functionName: 'withdraw',
+        args: [import.meta.env.BASE_TOKEN, xpBalance],
       });
     } catch (error) {
       toast.error('Failed to withdraw XP');
@@ -195,14 +196,14 @@ export default function WaveChallengeFlip() {
                   {loading.withdrawXP ? 'Processing...' : 'Withdraw XP'}
                 </button>
                 
-                <button
+                {/* <button
                   onClick={handleWithdrawLink}
                   disabled={loading.withdrawLink || isPending || isConfirming}
                   className="flex items-center justify-center px-4 py-3 rounded-lg font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <LinkIcon className="w-5 h-5 mr-2" />
                   {loading.withdrawLink ? 'Processing...' : 'Withdraw LINK'}
-                </button>
+                </button> */}
                 
                 <button
                   onClick={handleTriggerFallback}

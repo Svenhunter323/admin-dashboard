@@ -1,10 +1,10 @@
 import WavePrizePoolABI from '../../abi/WavePrizePool.json';
 
-export const WAVE_PRIZE_POOL_ADDRESS = "0x4ceb55189d5032ca3c91771a03fb88a1a7d9ee10";
+export const WAVE_PRIZE_POOL_ADDRESS = "0xd332fbe3be3b935e1e133abac2743962039c47e7";
 
 export const wavePrizePoolConfig = {
   address: WAVE_PRIZE_POOL_ADDRESS,
-  abi: WavePrizePoolABI,
+  abi: WavePrizePoolABI.abi,
 };
 
 export const wavePrizePoolABI = WavePrizePoolABI;

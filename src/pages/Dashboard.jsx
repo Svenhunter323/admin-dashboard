@@ -111,7 +111,7 @@ export default function Dashboard() {
                     User
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between py-3 ">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">High volume bet placed</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">5 minutes ago</p>
@@ -120,7 +120,7 @@ export default function Dashboard() {
                     Bet
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-3">
+                {/* <div className="flex items-center justify-between py-3">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">User banned for violation</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">10 minutes ago</p>
@@ -128,7 +128,7 @@ export default function Dashboard() {
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
                     Moderation
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
 

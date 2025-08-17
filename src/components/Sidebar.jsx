@@ -7,7 +7,7 @@ import {
   UsersIcon,
   CurrencyDollarIcon,
   CogIcon,
-  ArrowRightOnRectangleIcon,
+  ArrowRightCircleIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -20,7 +20,7 @@ const navigation = [
     icon: CogIcon,
     children: [
       { name: 'Wave Challenge Flip', href: '/admin/wave-challenge-flip' },
-      { name: 'Wave Flip', href: '/admin/wave-flip' },
+      // { name: 'Wave Flip', href: '/admin/wave-flip' },
       { name: 'Wave Prize Pool', href: '/admin/wave-prize-pool' },
     ]
   },
@@ -114,7 +114,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-300 rounded-lg hover:bg-red-600 hover:text-white transition-colors"
         >
-          <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3" />
+          <ArrowRightCircleIcon className="w-5 h-5 mr-3" />
           Logout
         </button>
       </div>

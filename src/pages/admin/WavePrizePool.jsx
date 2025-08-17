@@ -22,10 +22,17 @@ export default function WavePrizePool() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   // Contract reads
-  const { data: owner } = useReadContract({
+  const { data: owner, isSuccess: isOwnerSuccess } = useReadContract({
     ...wavePrizePoolConfig,
     functionName: 'owner',
+    watch: true,
   });
+
+
+  // const { data: owner } = useReadContract({
+  //   ...wavePrizePoolConfig,
+  //   functionName: 'owner',
+  // });
 
   const { data: isPaused } = useReadContract({
     ...wavePrizePoolConfig,
