@@ -65,6 +65,33 @@ const additionalFunctions = [
     stateMutability: 'view',
     inputs: [],
     outputs: [{ name: '', type: 'address' }],
+  },
+  {
+    name: 'setPoolData',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_poolId', type: 'bytes32' },
+      { name: '_burnFee', type: 'uint8' },
+      { name: '_treasuryFee', type: 'uint8' },
+      { name: '_limitAmount', type: 'uint256' },
+      { name: '_ticketPrice', type: 'uint256' }
+    ],
+    outputs: [],
+  },
+  {
+    name: 'refreshStartTime',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_poolId', type: 'bytes32' }],
+    outputs: [],
+  },
+  {
+    name: 'refreshStartTimes',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
   }
 ];
 

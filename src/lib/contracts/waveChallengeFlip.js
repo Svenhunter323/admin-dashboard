@@ -120,6 +120,18 @@ const additionalFunctions = [
     stateMutability: 'view',
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'setGameData',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_gameId', type: 'bytes32' },
+      { name: '_burnFee', type: 'uint8' },
+      { name: '_treasuryFee', type: 'uint8' },
+      { name: '_minTokenAmount', type: 'uint256' }
+    ],
+    outputs: [],
   }
 ];
 

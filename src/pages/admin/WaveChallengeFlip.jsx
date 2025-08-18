@@ -39,6 +39,12 @@ export default function WaveChallengeFlip() {
     xpAmount: '',
     side: true
   });
+  const [editingGame, setEditingGame] = useState(null);
+  const [editForm, setEditForm] = useState({
+    burnFee: '',
+    treasuryFee: '',
+    minTokenAmount: ''
+  });
   
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -278,6 +284,51 @@ export default function WaveChallengeFlip() {
     }
   };
 
+  const handleEditGame = (game) => {
+    setEditingGame(game);
+    setEditForm({
+      burnFee: game.burnFee.toString(),
+      treasuryFee: game.treasuryFee.toString(),
+      minTokenAmount: formatEther(game.minTokenAmount)
+    });
+  };
+
+  const handleUpdateGameData = async () => {
+    const { burnFee, treasuryFee, minTokenAmount } = editForm;
+    
+    if (!burnFee || !treasuryFee || !minTokenAmount) {
+      toast.error('Please fill all fields');
+      return;
+    }
+
+    if (parseInt(burnFee) + parseInt(treasuryFee) > 100) {
+      toast.error('Total fees cannot exceed 100%');
+      return;
+    }
+
+    try {
+      setLoading(prev => ({ ...prev, editGame: true }));
+      writeContract({
+        ...waveChallengeFlipConfig,
+        functionName: 'setGameData',
+        args: [
+          editingGame.gameId,
+          parseInt(burnFee),
+          parseInt(treasuryFee),
+          parseEther(minTokenAmount)
+        ],
+      });
+    } catch (error) {
+      toast.error('Failed to update game data');
+      setLoading(prev => ({ ...prev, editGame: false }));
+    }
+  };
+
+  const closeEditModal = () => {
+    setEditingGame(null);
+    setEditForm({ burnFee: '', treasuryFee: '', minTokenAmount: '' });
+  };
+
   const gamePoolColumns = [
     {
       key: 'gameId',
@@ -333,6 +384,19 @@ export default function WaveChallengeFlip() {
       ),
     },
   ];
+
+  const gamePoolActions = (game) => (
+    isOwner ? (
+      <button
+        onClick={() => handleEditGame(game)}
+        disabled={isPending || isConfirming}
+        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <CogIcon className="w-4 h-4 mr-1" />
+        Edit
+      </button>
+    ) : null
+  );
 
   const challengeColumns = [
     {
@@ -528,7 +592,7 @@ export default function WaveChallengeFlip() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Game Pools ({gamePools.length})
                 </h3>
-                <Table columns={gamePoolColumns} data={gamePools} />
+                <Table columns={gamePoolColumns} data={gamePools} actions={gamePoolActions} />
               </div>
             </div>
           )}
@@ -696,6 +760,96 @@ export default function WaveChallengeFlip() {
             </div>
           )}
         </div>
+
+        {/* Edit Game Modal */}
+        {editingGame && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Edit Game Pool
+                </h3>
+                <button
+                  onClick={closeEditModal}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Game ID
+                  </label>
+                  <div className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <span className="font-mono text-xs text-gray-600 dark:text-gray-400">
+                      {editingGame.gameId.slice(0, 8)}...{editingGame.gameId.slice(-6)}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Burn Fee (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.burnFee}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, burnFee: e.target.value }))}
+                      min="0"
+                      max="100"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Treasury Fee (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.treasuryFee}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, treasuryFee: e.target.value }))}
+                      min="0"
+                      max="100"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Minimum Token Amount (XP)
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.minTokenAmount}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, minTokenAmount: e.target.value }))}
+                    step="0.1"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={handleUpdateGameData}
+                    disabled={loading.editGame || isPending || isConfirming}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading.editGame ? 'Updating...' : 'Update Game'}
+                  </button>
+                  <button
+                    onClick={closeEditModal}
+                    className="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

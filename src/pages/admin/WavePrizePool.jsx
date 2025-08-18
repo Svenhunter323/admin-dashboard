@@ -35,6 +35,13 @@ export default function WavePrizePool() {
     ticketPrice: '',
     poolType: true // true for daily, false for weekly
   });
+  const [editingPool, setEditingPool] = useState(null);
+  const [editForm, setEditForm] = useState({
+    burnFee: '',
+    treasuryFee: '',
+    limitAmount: '',
+    ticketPrice: ''
+  });
   
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -264,6 +271,80 @@ export default function WavePrizePool() {
     }
   };
 
+  const handleEditPool = (pool) => {
+    setEditingPool(pool);
+    setEditForm({
+      burnFee: pool.burnFee?.toString() || '',
+      treasuryFee: pool.treasuryFee?.toString() || '',
+      limitAmount: pool.limitAmount ? formatEther(pool.limitAmount) : '',
+      ticketPrice: pool.ticketPrice ? formatEther(pool.ticketPrice) : ''
+    });
+  };
+
+  const handleUpdatePoolData = async () => {
+    const { burnFee, treasuryFee, limitAmount, ticketPrice } = editForm;
+    
+    if (!burnFee || !treasuryFee || !ticketPrice) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    if (parseInt(burnFee) + parseInt(treasuryFee) > 100) {
+      toast.error('Total fees cannot exceed 100%');
+      return;
+    }
+
+    try {
+      setLoading(prev => ({ ...prev, editPool: true }));
+      writeContract({
+        ...wavePrizePoolConfig,
+        functionName: 'setPoolData',
+        args: [
+          editingPool.poolId,
+          parseInt(burnFee),
+          parseInt(treasuryFee),
+          limitAmount ? parseEther(limitAmount) : 0,
+          parseEther(ticketPrice)
+        ],
+      });
+    } catch (error) {
+      toast.error('Failed to update pool data');
+      setLoading(prev => ({ ...prev, editPool: false }));
+    }
+  };
+
+  const handleRefreshStartTime = async (poolId) => {
+    try {
+      setLoading(prev => ({ ...prev, [`refresh_${poolId}`]: true }));
+      writeContract({
+        ...wavePrizePoolConfig,
+        functionName: 'refreshStartTime',
+        args: [poolId],
+      });
+    } catch (error) {
+      toast.error('Failed to refresh start time');
+      setLoading(prev => ({ ...prev, [`refresh_${poolId}`]: false }));
+    }
+  };
+
+  const handleRefreshAllStartTimes = async () => {
+    try {
+      setLoading(prev => ({ ...prev, refreshAll: true }));
+      writeContract({
+        ...wavePrizePoolConfig,
+        functionName: 'refreshStartTimes',
+      });
+    } catch (error) {
+      toast.error('Failed to refresh all start times');
+      setLoading(prev => ({ ...prev, refreshAll: false }));
+    }
+  };
+
+  const closeEditModal = () => {
+    setEditingPool(null);
+    setEditForm({ burnFee: '', treasuryFee: '', limitAmount: '', ticketPrice: '' });
+  };
+
   const poolColumns = [
     {
       key: 'poolId',
@@ -315,15 +396,35 @@ export default function WavePrizePool() {
   ];
 
   const poolActions = (pool) => (
-    pool.isActive && isOwner ? (
-      <button
-        onClick={() => handleDrawWinner(pool.poolId)}
-        disabled={loading[`draw_${pool.poolId}`] || isPending || isConfirming}
-        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <TrophyIcon className="w-4 h-4 mr-1" />
-        {loading[`draw_${pool.poolId}`] ? 'Drawing...' : 'Draw Winner'}
-      </button>
+    isOwner ? (
+      <div className="flex space-x-2">
+        <button
+          onClick={() => handleEditPool(pool)}
+          disabled={isPending || isConfirming}
+          className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <CogIcon className="w-3 h-3 mr-1" />
+          Edit
+        </button>
+        <button
+          onClick={() => handleRefreshStartTime(pool.poolId)}
+          disabled={loading[`refresh_${pool.poolId}`] || isPending || isConfirming}
+          className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <ArrowPathIcon className="w-3 h-3 mr-1" />
+          {loading[`refresh_${pool.poolId}`] ? 'Refreshing...' : 'Refresh'}
+        </button>
+        {pool.isActive && (
+          <button
+            onClick={() => handleDrawWinner(pool.poolId)}
+            disabled={loading[`draw_${pool.poolId}`] || isPending || isConfirming}
+            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-yellow-700 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <TrophyIcon className="w-3 h-3 mr-1" />
+            {loading[`draw_${pool.poolId}`] ? 'Drawing...' : 'Draw'}
+          </button>
+        )}
+      </div>
     ) : null
   );
 
@@ -435,55 +536,20 @@ export default function WavePrizePool() {
                   withdraw: loading.withdraw || isPending || isConfirming 
                 }}
               >
-                {/* <div className="space-y-4">
+                <div className="space-y-4">
                   <h4 className="text-md font-semibold text-gray-900 dark:text-white">
                     Pool Management
                   </h4>
                   
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Deposit XP to Pool
-                    </label>
-                    <div className="flex space-x-3">
-                      <input
-                        type="number"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                        placeholder="Amount in XP"
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <button
-                        onClick={handleDepositXP}
-                        disabled={loading.deposit || isPending || isConfirming}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loading.deposit ? 'Depositing...' : 'Deposit'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Set Prize Amount
-                    </label>
-                    <div className="flex space-x-3">
-                      <input
-                        type="number"
-                        value={prizeAmount}
-                        onChange={(e) => setPrizeAmount(e.target.value)}
-                        placeholder="Prize amount in XP"
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <button
-                        onClick={handleSetPrizeAmount}
-                        disabled={loading.config || isPending || isConfirming}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loading.config ? 'Setting...' : 'Set Prize'}
-                      </button>
-                    </div>
-                  </div>
-                </div> */}
+                  <button
+                    onClick={handleRefreshAllStartTimes}
+                    disabled={loading.refreshAll || isPending || isConfirming}
+                    className="w-full flex items-center justify-center px-4 py-3 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowPathIcon className="w-5 h-5 mr-2" />
+                    {loading.refreshAll ? 'Refreshing All...' : 'Refresh All Start Times'}
+                  </button>
+                </div>
               </OwnerActions>
             </div>
           )}
@@ -625,6 +691,111 @@ export default function WavePrizePool() {
             </div>
           )}
         </div>
+
+        {/* Edit Pool Modal */}
+        {editingPool && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Edit Prize Pool
+                </h3>
+                <button
+                  onClick={closeEditModal}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Pool ID
+                  </label>
+                  <div className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <span className="font-mono text-xs text-gray-600 dark:text-gray-400">
+                      {editingPool.poolId.slice(0, 8)}...{editingPool.poolId.slice(-6)}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Burn Fee (%) *
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.burnFee}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, burnFee: e.target.value }))}
+                      min="0"
+                      max="100"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Treasury Fee (%) *
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.treasuryFee}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, treasuryFee: e.target.value }))}
+                      min="0"
+                      max="100"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Limit Amount (XP)
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.limitAmount}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, limitAmount: e.target.value }))}
+                      placeholder="0 (no limit)"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Ticket Price (XP) *
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.ticketPrice}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, ticketPrice: e.target.value }))}
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={handleUpdatePoolData}
+                    disabled={loading.editPool || isPending || isConfirming}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading.editPool ? 'Updating...' : 'Update Pool'}
+                  </button>
+                  <button
+                    onClick={closeEditModal}
+                    className="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
