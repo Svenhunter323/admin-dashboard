@@ -5,8 +5,8 @@ import { sepolia } from 'wagmi/chains';
 import { formatUnits } from 'viem';
 
 // Ethereum Sepolia — VRF v2.5 coordinator (official)
-const DEFAULT_COORDINATOR = import.meta.env.VITE_DEFAULT_COORDINATOR || '0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B';
-const VRF_SUBSCRIPTION_ID = import.meta.env.VITE_VRF_SUBSCRIPTION_ID || '49596265338176564079456785074959696723617889412259832996157212647999741015293';
+const VITE_DEFAULT_COORDINATOR = import.meta.env.VITE_VITE_DEFAULT_COORDINATOR || '0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B';
+const VITE_VRF_SUBSCRIPTION_ID = import.meta.env.VITE_VITE_VRF_SUBSCRIPTION_ID || '49596265338176564079456785074959696723617889412259832996157212647999741015293';
 
 // Minimal ABI + the InvalidSubscription error so viem can decode reverts
 const vrfV25Abi = [
@@ -27,8 +27,8 @@ const vrfV25Abi = [
 ];
 
 export const useLinkBalance = ({
-  subscriptionId = VRF_SUBSCRIPTION_ID,   // MUST be the real v2.5 subId (BigInt or number coercible to BigInt)
-  coordinator = DEFAULT_COORDINATOR,
+  subscriptionId = VITE_VRF_SUBSCRIPTION_ID,   // MUST be the real v2.5 subId (BigInt or number coercible to BigInt)
+  coordinator = VITE_DEFAULT_COORDINATOR,
   chainId = sepolia.id,
 } = {}) => {
   const [balance, setBalance] = useState(null); // { link:{raw,formatted}, native:{raw,formatted}, reqCount, owner, consumers }

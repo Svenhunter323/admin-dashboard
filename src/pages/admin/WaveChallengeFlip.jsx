@@ -78,9 +78,11 @@ export default function WaveChallengeFlip() {
 
   // Set default base token from environment variable
   useEffect(() => {
-    if (import.meta.env.BASE_TOKEN && !gameForm.baseToken) {
-      setGameForm(prev => ({ ...prev, baseToken: import.meta.env.BASE_TOKEN }));
+    if (import.meta.env.VITE_BASE_TOKEN && !gameForm.baseToken) {
+      setGameForm(prev => ({ ...prev, baseToken: import.meta.env.VITE_BASE_TOKEN }));
+      // console.log('Base token set from environment variable:', import.meta.env.VITE_BASE_TOKEN);
     }
+    // console.log('WaveChallengeFlip component mounted with base token:', gameForm.baseToken);
   }, []);
 
   // Fetch game pools data
@@ -160,7 +162,7 @@ export default function WaveChallengeFlip() {
     if (isSuccess) {
       toast.success('Transaction completed successfully!');
       setLoading({});
-      setGameForm({ baseToken: '', burnFee: '', treasuryFee: '', minTokenAmount: '' });
+      setGameForm({ ...gameForm, burnFee: '', treasuryFee: '', minTokenAmount: '' });
       setChallengeForm({ gameId: '', xpAmount: '', side: true });
     }
   }, [isSuccess]);

@@ -28,7 +28,7 @@ export default function WavePrizePool() {
   const [depositAmount, setDepositAmount] = useState('');
   const [prizeAmount, setPrizeAmount] = useState('');
   const [poolForm, setPoolForm] = useState({
-    baseToken: '',
+    baseToken: import.meta.env.VITE_BASE_TOKEN || '',
     burnFee: '',
     treasuryFee: '',
     limitAmount: '',
@@ -84,9 +84,11 @@ export default function WavePrizePool() {
 
   // Set default base token from environment variable
   useEffect(() => {
-    if (import.meta.env.BASE_TOKEN && !poolForm.baseToken) {
-      setPoolForm(prev => ({ ...prev, baseToken: import.meta.env.BASE_TOKEN }));
+    if (import.meta.env.VITE_BASE_TOKEN && !poolForm.baseToken) {
+      setPoolForm(prev => ({ ...prev, baseToken: import.meta.env.VITE_BASE_TOKEN }));
+      // console.log('Base token set from environment variable:', import.meta.env.VITE_BASE_TOKEN);
     }
+    // console.log('WavePrizePool component mounted with base token:', poolForm.baseToken);
   }, []);
 
   // Fetch pools data
@@ -128,7 +130,7 @@ export default function WavePrizePool() {
       setDepositAmount('');
       setPrizeAmount('');
       setPoolForm({
-        baseToken: '',
+        ...poolForm,
         burnFee: '',
         treasuryFee: '',
         limitAmount: '',
@@ -433,12 +435,11 @@ export default function WavePrizePool() {
                   withdraw: loading.withdraw || isPending || isConfirming 
                 }}
               >
-                <div className="space-y-4">
+                {/* <div className="space-y-4">
                   <h4 className="text-md font-semibold text-gray-900 dark:text-white">
                     Pool Management
                   </h4>
                   
-                  {/* Deposit XP */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Deposit XP to Pool
@@ -461,7 +462,6 @@ export default function WavePrizePool() {
                     </div>
                   </div>
 
-                  {/* Set Prize Amount */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Set Prize Amount
@@ -483,7 +483,7 @@ export default function WavePrizePool() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </OwnerActions>
             </div>
           )}

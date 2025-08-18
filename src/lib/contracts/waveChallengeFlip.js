@@ -1,6 +1,6 @@
 import WaveChallengeFlipABI from '../../abi/WaveChallengeFlip.json';
 
-export const WAVE_CHALLENGE_FLIP_ADDRESS = import.meta.env.WAVE_CHALLENGE_FLIP_ADDRESS || "0x303b1f680b379fe3f3604c779c2f0a80326cddb6";
+export const VITE_WAVE_CHALLENGE_FLIP_ADDRESS = import.meta.env.VITE_WAVE_CHALLENGE_FLIP_ADDRESS || "0x303b1f680b379fe3f3604c779c2f0a80326cddb6";
 
 // Add missing functions to the ABI if they're not included
 const additionalFunctions = [
@@ -124,7 +124,7 @@ const additionalFunctions = [
 ];
 
 export const waveChallengeFlipConfig = {
-  address: WAVE_CHALLENGE_FLIP_ADDRESS,
+  address: VITE_WAVE_CHALLENGE_FLIP_ADDRESS,
   abi: [...(WaveChallengeFlipABI.abi || WaveChallengeFlipABI), ...additionalFunctions],
 };
 
