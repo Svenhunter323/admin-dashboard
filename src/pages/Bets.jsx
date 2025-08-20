@@ -11,7 +11,8 @@ export default function Bets() {
 
   const fetchBets = async () => {
     try {
-      const response = await adminAPI.getBets();
+      // Make sure adminAPI.getBets() points to /api/admin/bets and includes Bearer token
+      const response = await adminAPI.getBets?.(100) ?? await adminAPI.get('/bets', { params: { limit: 100 } });
       setBets(response.data);
     } catch (error) {
       console.error('Failed to fetch bets:', error);
@@ -52,7 +53,7 @@ export default function Bets() {
       render: (value) => (
         <div className="flex items-center">
           <CurrencyDollarIcon className="w-4 h-4 text-gray-400 mr-1" />
-          <span className="font-medium">{value} XP</span>
+          <span className="font-medium">{Number(value/1e18).toLocaleString()} XP</span>
         </div>
       ),
     },
@@ -61,25 +62,30 @@ export default function Bets() {
       label: 'Result',
       render: (value, row) => {
         const isWin = value === 'win';
+        const isPending = value === 'pending';
         return (
           <div className="flex items-center">
-            {isWin ? (
+            {isPending ? (
+              <span className="w-4 h-4 mr-1 rounded-full bg-gray-300 dark:bg-gray-600 inline-block" />
+            ) : isWin ? (
               <TrophyIcon className="w-4 h-4 text-green-500 mr-1" />
             ) : (
               <XCircleIcon className="w-4 h-4 text-red-500 mr-1" />
             )}
-            <span
-              className={`font-medium ${
-                isWin ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-              }`}
-            >
-              {isWin ? 'Win' : 'Loss'}
-            </span>
-            {row.payout && (
-              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                (+{row.payout} XP)
+            {isPending ? (
+              <span className="font-medium text-gray-600 dark:text-gray-400">Pending</span>
+            ) : (
+              <span
+                className={`font-medium ${isWin ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+              >
+                {isWin ? 'Win' : 'Loss'}
               </span>
             )}
+            {row.payout ? (
+              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                (+{Number(row.payout/1e18).toLocaleString()} XP)
+              </span>
+            ) : null}
           </div>
         );
       },
@@ -96,11 +102,11 @@ export default function Bets() {
     {
       key: 'multiplier',
       label: 'Multiplier',
-      render: (value) => value ? `${value}x` : '-',
+      render: (value) => (value ? `${value}x` : '-'),
     },
   ];
 
-  const totalVolume = bets.reduce((sum, bet) => sum + bet.amount, 0);
+  const totalVolume = bets.reduce((sum, bet) => sum + Number(bet.amount/1e18 || 0), 0);
   const totalWins = bets.filter(bet => bet.result === 'win').length;
   const winRate = bets.length > 0 ? ((totalWins / bets.length) * 100).toFixed(1) : 0;
 
@@ -144,7 +150,7 @@ export default function Bets() {
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Volume</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {totalVolume.toLocaleString()} XP
+                    {(totalVolume).toLocaleString()} XP
                   </p>
                 </div>
               </div>

@@ -16,7 +16,10 @@ import {
   MinusIcon,
   ChartBarIcon,
   UserGroupIcon,
-  ClockIcon
+  ClockIcon,
+  ArrowPathIcon,
+  CogIcon,
+  XMarkIcon 
 } from '@heroicons/react/24/outline';
 
 export default function WavePrizePool() {
@@ -178,7 +181,8 @@ export default function WavePrizePool() {
       setLoading(prev => ({ ...prev, withdraw: true }));
       writeContract({
         ...wavePrizePoolConfig,
-        functionName: 'withdrawPrizePool',
+        functionName: 'withdraw',
+        args: [poolForm.baseToken, parseEther(poolForm.ticketPrice)],
       });
     } catch (error) {
       toast.error('Failed to withdraw prize pool');
@@ -669,7 +673,7 @@ export default function WavePrizePool() {
                             : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'
                         }`}
                       >
-                        Weekly Pool
+                        Monthly Pool
                       </button>
                     </div>
                   </div>

@@ -12,7 +12,7 @@ export default function Users() {
 
   const fetchUsers = async () => {
     try {
-      const response = await adminAPI.getUsers();
+      const response = await adminAPI.getUsers?.() ?? await adminAPI.get('/users');
       setUsers(response.data);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -30,14 +30,12 @@ export default function Users() {
 
   const handleBanUser = async (userId) => {
     try {
-      await adminAPI.banUser(userId);
-      
-      // Emit kicked event if user is online
-      const socket = getSocket();
-      if (socket) {
-        socket.emit('kicked', { userId });
-      }
-      
+      await (adminAPI.banUser ? adminAPI.banUser(userId) : adminAPI.patch(`/users/${userId}/ban`));
+
+      // Optional: also emit a kick to the user if your client joins per-user rooms
+      const socket = getSocket?.();
+      if (socket) socket.emit('kicked', { userId });
+
       fetchUsers();
     } catch (error) {
       console.error('Failed to ban user:', error);
@@ -46,7 +44,7 @@ export default function Users() {
 
   const handleUnbanUser = async (userId) => {
     try {
-      await adminAPI.unbanUser(userId);
+      await (adminAPI.unbanUser ? adminAPI.unbanUser(userId) : adminAPI.patch(`/users/${userId}/unban`));
       fetchUsers();
     } catch (error) {
       console.error('Failed to unban user:', error);
@@ -57,7 +55,7 @@ export default function Users() {
     {
       key: 'username',
       label: 'Username',
-      render: (value, row) => (
+      render: (value) => (
         <div className="flex items-center">
           <UserIcon className="w-5 h-5 text-gray-400 mr-2" />
           <span className="font-medium">{value}</span>
@@ -65,11 +63,7 @@ export default function Users() {
       ),
     },
     {
-      key: 'email',
-      label: 'Email',
-    },
-    {
-      key: 'banned',
+      key: 'isBanned', // <-- renamed from 'banned'
       label: 'Status',
       render: (value) => (
         <span
@@ -86,18 +80,18 @@ export default function Users() {
     {
       key: 'joinedAt',
       label: 'Joined',
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (value) => (value ? new Date(value).toLocaleDateString() : '—'),
     },
     {
       key: 'lastActive',
       label: 'Last Active',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'Never',
+      render: (value) => (value ? new Date(value).toLocaleDateString() : 'Never'),
     },
   ];
 
   const actions = (user) => (
     <>
-      {user.banned ? (
+      {user.isBanned ? (
         <button
           onClick={() => handleUnbanUser(user.id)}
           className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40 transition-colors"
@@ -156,7 +150,7 @@ export default function Users() {
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Users</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {users.filter(u => !u.banned).length}
+                    {users.filter(u => !u.isBanned).length}
                   </p>
                 </div>
               </div>
@@ -168,7 +162,7 @@ export default function Users() {
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Banned Users</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {users.filter(u => u.banned).length}
+                    {users.filter(u => u.isBanned).length}
                   </p>
                 </div>
               </div>

@@ -17,7 +17,8 @@ import {
   TrophyIcon,
   ClockIcon,
   UserGroupIcon,
-  XMarkIcon
+  XMarkIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 import { config } from "../../config.jsx";
 

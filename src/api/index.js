@@ -29,10 +29,11 @@ api.interceptors.response.use(
 export const adminAPI = {
   login: (credentials) => api.post('/api/admin/login', credentials),
   getStats: () => api.get('/api/admin/stats'),
+  getAnalytics: (day) => api.get('/api/admin/analytics', { params: { day } }),
   getUsers: () => api.get('/api/admin/users'),
   banUser: (id) => api.patch(`/api/admin/users/${id}/ban`),
   unbanUser: (id) => api.patch(`/api/admin/users/${id}/unban`),
-  getBets: () => api.get('/api/admin/bets'),
+  getBets: (limit = 100) => api.get('/api/admin/bets', { params: { limit } }),
 };
 
 export default api;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '../api';
 import { useSocket } from '../hooks/useSocket';
 import Header from '../components/Header';
@@ -22,54 +22,67 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export default function Analytics() {
   const [analyticsData, setAnalyticsData] = useState({
-    dailyStats: [],
-    gameTypes: [],
-    userGrowth: [],
+    dailyStats: [],   // [{ date:'YYYY-MM-DD', bets, volume, users }]
+    gameTypes: [],    // [{ name, value, count }]
+    userGrowth: [],   // [{ month:'Jan', users }]
+    live: {           // optional live KPIs
+      activeUsers: 0,
+      betsToday: 0,
+      winRate: 0,
+    },
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async (days = 7) => {
     try {
-      const response = await adminAPI.getStats();
-      // Mock analytics data - replace with real API data
+      setLoading(true);
+      // If you added adminAPI.getAnalytics, you can call that instead:
+      // const res = await adminAPI.getAnalytics(days);
+      // const res = await adminAPI.get('/analytics', { params: { days } });
+      const res = await adminAPI.getAnalytics('/api/admin/analytics', { params: { day: days } });
+      // Be defensive about shape
+      const data = res?.data || {};
       setAnalyticsData({
-        dailyStats: [
-          { date: '2024-01-01', bets: 120, volume: 15000, users: 45 },
-          { date: '2024-01-02', bets: 150, volume: 18000, users: 52 },
-          { date: '2024-01-03', bets: 180, volume: 22000, users: 48 },
-          { date: '2024-01-04', bets: 200, volume: 25000, users: 65 },
-          { date: '2024-01-05', bets: 175, volume: 21000, users: 58 },
-          { date: '2024-01-06', bets: 220, volume: 28000, users: 72 },
-          { date: '2024-01-07', bets: 195, volume: 24000, users: 61 },
-        ],
-        gameTypes: [
-          // { name: 'Coin Flip', value: 45, count: 450 },
-          { name: 'Prize Pool', value: 36, count: 150 },
-          { name: 'Coin Flip', value: 64, count: 300 },
-          // { name: 'Blackjack', value: 10, count: 100 },
-        ],
-        userGrowth: [
-          { month: 'Jan', users: 100 },
-          { month: 'Feb', users: 150 },
-          { month: 'Mar', users: 200 },
-          { month: 'Apr', users: 280 },
-          { month: 'May', users: 350 },
-          { month: 'Jun', users: 420 },
-        ],
+        dailyStats: Array.isArray(data.dailyStats) ? data.dailyStats : [],
+        gameTypes: Array.isArray(data.gameTypes) ? data.gameTypes : [],
+        userGrowth: Array.isArray(data.userGrowth) ? data.userGrowth : [],
+        live: {
+          activeUsers: Number(data?.live?.activeUsers ?? 0),
+          betsToday: Number(data?.live?.betsToday ?? 0),
+          winRate: Number(data?.live?.winRate ?? 0),
+        },
       });
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+    } catch (err) {
+      console.error('Failed to fetch analytics:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchAnalytics();
   }, []);
 
-  // Refresh analytics when users are updated
-  useSocket('users_updated', fetchAnalytics);
+  // Initial load
+  useEffect(() => {
+    fetchAnalytics(7);
+  }, [fetchAnalytics]);
+
+  // Live updates from backend (debounced + pushed by server)
+  useSocket('analytics_updated', (payload) => {
+    // payload shape matches GET /analytics response
+    setAnalyticsData({
+      dailyStats: Array.isArray(payload?.dailyStats) ? payload.dailyStats : [],
+      gameTypes: Array.isArray(payload?.gameTypes) ? payload.gameTypes : [],
+      userGrowth: Array.isArray(payload?.userGrowth) ? payload.userGrowth : [],
+      live: {
+        activeUsers: Number(payload?.live?.activeUsers ?? 0),
+        betsToday: Number(payload?.live?.betsToday ?? 0),
+        winRate: Number(payload?.live?.winRate ?? 0),
+      },
+    });
+  });
+
+  // Fallback: if other admin events happen, you can refresh on those too
+  useSocket('users_updated', () => fetchAnalytics(7));
+  useSocket('bet_placed',   () => fetchAnalytics(7)); // optional if you prefer pull over push
+  useSocket('liveHistory',  () => fetchAnalytics(7)); // optional
 
   if (loading) {
     return (
@@ -79,10 +92,15 @@ export default function Analytics() {
     );
   }
 
+  const live = analyticsData.live || {};
+  const activeUsers = Number(live.activeUsers ?? 0);
+  const betsToday   = Number(live.betsToday ?? 0);
+  const winRate     = Number(live.winRate ?? 0);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <Header />
-      
+
       <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
@@ -146,7 +164,8 @@ export default function Analytics() {
                       color: 'white'
                     }}
                   />
-                  <Bar dataKey="users" fill="#10B981" radius={[4, 4, 0, 0]} />
+                  {/* Backend should return `users` in dailyStats; defaults to 0 otherwise */}
+                  <Bar dataKey={(row) => Number(row.users ?? 0)} fill="#10B981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartBlock>
@@ -221,15 +240,21 @@ export default function Analytics() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">24</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {activeUsers.toLocaleString()}
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Active Users</p>
               </div>
               <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">156</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {betsToday.toLocaleString()}
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Bets Today</p>
               </div>
               <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">98.5%</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {Number.isFinite(winRate) ? `${winRate}%` : '0%'}
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Win Rate</p>
               </div>
             </div>
