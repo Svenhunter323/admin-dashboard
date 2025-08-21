@@ -79,7 +79,7 @@ export default function Dashboard() {
             />
             <KPIBlock
               title="Total Volume"
-              value={`${stats.totalVolume/1e18} XP`}
+              value={`${(stats.totalVolume / 1e18).toFixed(2)} XP`}
               icon={ChartBarIcon}
               color="yellow"
               trend={-3}

@@ -9,7 +9,6 @@ import Analytics from './pages/Analytics';
 import Users from './pages/Users';
 import Bets from './pages/Bets';
 import WaveChallengeFlip from './pages/admin/WaveChallengeFlip';
-import WaveFlip from './pages/admin/WaveFlip';
 import WavePrizePool from './pages/admin/WavePrizePool';
 import Login from './pages/Login';
 import { createWeb3Modal, defaultWagmiConfig } from '@web3modal/wagmi/react';

@@ -81,7 +81,8 @@ export default function WaveChallengeFlip() {
     functionName: 'getLinkBalance',
   });
 
-  const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
+  // const isOwner = address && owner && address.toLowerCase() === owner.toLowerCase();
+  const isOwner = address && treasury && address.toLowerCase() === treasury.toLowerCase();
 
   // Set default base token from environment variable
   useEffect(() => {
