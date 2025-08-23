@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   ChartBarIcon,
@@ -29,6 +29,7 @@ const navigation = [
 export default function Sidebar() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [expandedItems, setExpandedItems] = useState({});
 
   const handleLogout = () => {
@@ -42,6 +43,15 @@ export default function Sidebar() {
       [itemName]: !prev[itemName]
     }));
   };
+
+  const isActive = (href) => {
+    return location.pathname === href;
+  };
+
+  const handleNavigation = (href) => {
+    navigate(href);
+  };
+
   return (
     <div className="flex flex-col w-64 bg-gray-900 dark:bg-gray-800">
       <div className="flex items-center justify-center h-16 px-4 bg-gray-800 dark:bg-gray-700">
@@ -73,37 +83,33 @@ export default function Sidebar() {
                 {expandedItems[item.name] && (
                   <div className="ml-8 mt-2 space-y-1">
                     {item.children.map((child) => (
-                      <NavLink
+                      <button
                         key={child.name}
-                        to={child.href}
-                        className={({ isActive }) =>
-                          `block px-4 py-2 text-sm rounded-lg transition-colors ${
-                            isActive
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-                          }`
-                        }
+                        onClick={() => handleNavigation(child.href)}
+                        className={`block w-full text-left px-4 py-2 text-sm rounded-lg transition-colors ${
+                          isActive(child.href)
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                        }`}
                       >
                         {child.name}
-                      </NavLink>
+                      </button>
                     ))}
                   </div>
                 )}
               </>
             ) : (
-              <NavLink
-                to={item.href}
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`
-                }
+              <button
+                onClick={() => handleNavigation(item.href)}
+                className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
               >
                 <item.icon className="w-5 h-5 mr-3" />
                 {item.name}
-              </NavLink>
+              </button>
             )}
           </div>
         ))}
