@@ -20,7 +20,6 @@ const navigation = [
     icon: CogIcon,
     children: [
       { name: 'Wave Challenge Flip', href: '/admin/wave-challenge-flip' },
-      // { name: 'Wave Flip', href: '/admin/wave-flip' },
       { name: 'Wave Prize Pool', href: '/admin/wave-prize-pool' },
     ]
   },
@@ -31,6 +30,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState({});
+    'Smart Contracts': true // Auto-expand Smart Contracts by default
 
   const handleLogout = () => {
     logout();
@@ -48,6 +48,9 @@ export default function Sidebar() {
     return location.pathname === href;
   };
 
+  const isParentActive = (children) => {
+    return children?.some(child => location.pathname === child.href);
+  };
   const handleNavigation = (href) => {
     navigate(href);
   };
@@ -65,7 +68,11 @@ export default function Sidebar() {
               <>
                 <button
                   onClick={() => toggleExpanded(item.name)}
-                  className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors"
+                  className={`flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    isParentActive(item.children)
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
                 >
                   <div className="flex items-center">
                     <item.icon className="w-5 h-5 mr-3" />
@@ -88,7 +95,7 @@ export default function Sidebar() {
                         onClick={() => handleNavigation(child.href)}
                         className={`block w-full text-left px-4 py-2 text-sm rounded-lg transition-colors ${
                           isActive(child.href)
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-blue-700 text-white shadow-sm'
                             : 'text-gray-400 hover:bg-gray-700 hover:text-white'
                         }`}
                       >
